@@ -1,0 +1,6 @@
+[theme]
+base = "light"
+primaryColor = "#7B5EA7"        # Connections purple
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2EFF7"
+textColor = "#1A1A1A"
