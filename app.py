@@ -23,7 +23,7 @@ PURPLE = "#D96BFF"   # neon connections purple
 PLAYER_COLORS = [GREEN, YELLOW, PURPLE, BLUE]
 PODIUM_SHADES = {"wordle": ["#3DFF6E", "#2BB852", "#1E8A3C"],
                  "connections": ["#D96BFF", "#A94FD1", "#7C37A3"]}
-FONT = "'Times New Roman', Times, serif"
+FONT = "-apple-system, 'Helvetica Neue', Arial, sans-serif"
 
 st.markdown(f"""
 <style>

@@ -17,7 +17,7 @@ const MUTED = new Color("#8A8A8E");
 const CARDBORDER = new Color("#2A2A2C");
 
 const serif = (size, bold) =>
-  new Font(bold ? "TimesNewRomanPS-BoldMT" : "TimesNewRomanPSMT", size);
+  bold ? Font.boldSystemFont(size) : Font.systemFont(size);
 
 async function loadData() {
   try {
