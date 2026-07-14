@@ -75,6 +75,9 @@ def main():
     conn.close()
     print(f"Processed {seen_updates} update(s); {new_rows} new result(s).")
 
+    from export_streaks import export
+    export()
+
 
 if __name__ == "__main__":
     main()
