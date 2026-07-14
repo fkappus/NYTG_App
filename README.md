@@ -23,7 +23,7 @@ Telegram group ──► bot reads new messages
 
 ## For players
 
-- **Dashboard:** https://YOUR-APP-NAME.streamlit.app *(ask in the group for the link and password)*
+- **Dashboard:** https://nytgapp-uzjziac7wjm7ieje5gsjn4.streamlit.app *(ask in the group for the link and password)*
 - Post your results in the Telegram group using the official **Share** button in the NYT app — that exact format is what the parser understands. Typed-out results or screenshots are ignored.
 - Data updates **daily at noon** (German time). Results posted after noon appear the next day. The "last refreshed" stamp under the title shows how current the data is.
 - What you'll find: current play streaks per game, podium rankings by average attempts/mistakes, and guess/mistake distributions — filterable by day, last 7 days, last 30 days, or all-time.
