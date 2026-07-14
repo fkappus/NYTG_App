@@ -78,6 +78,15 @@ if not gate():
     st.stop()
 
 
+# One display name per person. Keys are Telegram player IDs; anyone not
+# listed falls back to their most recently seen name.
+DISPLAY_NAMES = {
+    8983515512: "Finn",
+    5182590002: "Peter",
+    1197776677: "Stella",
+}
+
+
 @st.cache_data(ttl=300)
 def load() -> pd.DataFrame:
     import db as _db
@@ -85,6 +94,11 @@ def load() -> pd.DataFrame:
     df = pd.read_sql_query("SELECT * FROM results", conn,
                            parse_dates=["puzzle_date"])
     conn.close()
+    if not df.empty:
+        latest = df.sort_values("message_ts") \
+                   .groupby("player_id")["player_name"].last()
+        df["player_name"] = df["player_id"].map(
+            lambda i: DISPLAY_NAMES.get(i, latest[i]))
     return df
 
 
