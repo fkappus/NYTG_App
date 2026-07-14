@@ -1,6 +1,7 @@
 [theme]
-base = "light"
-primaryColor = "#7B5EA7"        # Connections purple
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F2EFF7"
-textColor = "#1A1A1A"
+base = "dark"
+primaryColor = "#3DFF6E"
+backgroundColor = "#0A0A0B"
+secondaryBackgroundColor = "#141416"
+textColor = "#FFFFFF"
+font = "serif"
