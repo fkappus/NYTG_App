@@ -166,13 +166,13 @@ st.markdown(f"<div class='streaks'>{''.join(cards)}</div>",
 
 # ---------- period selector (below streaks) ----------
 period = st.segmented_control(
-    "Period", ["Day", "Week", "Month", "All-time"], default="Week",
+    "Period", ["Day", "7 days", "30 days", "All-time"], default="7 days",
     label_visibility="collapsed")
 today = full["puzzle_date"].max().date()
 cutoff = {"Day": today,
-          "Week": today - timedelta(days=today.weekday()),
-          "Month": today.replace(day=1),
-          "All-time": full["puzzle_date"].min().date()}[period or "Week"]
+          "7 days": today - timedelta(days=6),
+          "30 days": today - timedelta(days=29),
+          "All-time": full["puzzle_date"].min().date()}[period or "7 days"]
 df = full[full["puzzle_date"].dt.date >= cutoff]
 if df.empty:
     st.info("No games in this period yet.")
@@ -249,5 +249,5 @@ if not c.empty:
 
 st.markdown(f"<div class='stamp' style='margin-top:18px'>{len(df)} results "
             f"in view · {df['puzzle_date'].min():%d %b %Y} – "
-            f"{df['puzzle_date'].max():%d %b %Y} · auto-updates every 6 h"
+            f"{df['puzzle_date'].max():%d %b %Y} · updates daily at noon"
             f"</div>", unsafe_allow_html=True)
