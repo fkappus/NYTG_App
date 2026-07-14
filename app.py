@@ -189,12 +189,14 @@ def podium(g: pd.DataFrame, shades, unit: str):
 def distribution(g: pd.DataFrame, cats, labels, title: str):
     st.markdown(f"<div class='sub'>{title}</div>", unsafe_allow_html=True)
     fig = go.Figure()
+    peak = 0
     for p in players:
         sub = g[g["player_name"] == p]
         if sub.empty:
             continue
         pct = (sub["score"].value_counts(normalize=True) * 100)
         vals = [round(pct.get(cat, 0)) for cat in cats]
+        peak = max(peak, max(vals))
         fig.add_bar(name=p, y=labels, x=vals, orientation="h",
                     marker_color=color_of[p],
                     text=[f"{v}%" if v else "" for v in vals],
@@ -206,7 +208,7 @@ def distribution(g: pd.DataFrame, cats, labels, title: str):
         font=dict(color=TEXT, size=14, family=FONT),
         margin=dict(l=8, r=30, t=4, b=4),
         legend=dict(orientation="h", y=1.08, x=0),
-        xaxis=dict(visible=False, range=[0, 105]),
+        xaxis=dict(visible=False, range=[0, max(62, peak * 1.12)]),
         yaxis=dict(autorange="reversed", gridcolor=BORDER,
                    tickfont=dict(size=15)))
     st.plotly_chart(fig, width="stretch",
