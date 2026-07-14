@@ -1,50 +1,61 @@
-# NYT Games Group Tracker
+# Bermuda Triangle 🍪 — NYT Games Tracker
 
-Automatically collects Wordle and Connections results shared in a Telegram
-group and serves an interactive leaderboard.
+## What this is
 
-**Pipeline:** Telegram bot → GitHub Actions (every 6 h) → `ingest.py` →
-`results.db` (SQLite, committed to this repo) → Streamlit dashboard.
+Our friend group shares daily [New York Times Games](https://www.nytimes.com/crosswords) results — **Wordle** and **Connections** — in a Telegram group chat. This project automatically collects those share messages, parses them into structured data, and serves a live leaderboard dashboard.
 
-## Files
+No one has to do anything: post your result in the group like always, and it shows up on the dashboard after the next update. The full history is included, all the way back to the original WhatsApp group (September 2025) from before we switched to Telegram.
+
+**How it works:**
+
+```
+Telegram group ──► bot reads new messages
+                        │  (GitHub Actions, daily at noon)
+                        ▼
+                  ingest.py parses Wordle / Connections share texts
+                        │
+                        ▼
+                  results.db (SQLite, committed to this repo)
+                        │
+                        ▼
+                  Streamlit dashboard (auto-redeploys on every commit)
+```
+
+## For players
+
+- **Dashboard:** https://YOUR-APP-NAME.streamlit.app *(ask in the group for the link and password)*
+- Post your results in the Telegram group using the official **Share** button in the NYT app — that exact format is what the parser understands. Typed-out results or screenshots are ignored.
+- Data updates **daily at noon** (German time). Results posted after noon appear the next day. The "last refreshed" stamp under the title shows how current the data is.
+- What you'll find: current play streaks per game, podium rankings by average attempts/mistakes, and guess/mistake distributions — filterable by day, last 7 days, last 30 days, or all-time.
+- Scoring: Wordle = number of guesses (X counts as 7). Connections = number of mistakes (0 = perfect).
+- Tip: on iPhone, open the dashboard in Safari → Share → **Add to Home Screen** for an app-like experience.
+
+## Setup (for whoever maintains this)
+
+**Components**
 
 | File | Purpose |
 |---|---|
 | `nyt_parser.py` | Regex parsing of Wordle / Connections share texts |
-| `db.py` | SQLite schema + idempotent upserts |
-| `ingest.py` | Polls Telegram `getUpdates`, ingests new results |
+| `db.py` | SQLite schema + idempotent upserts (keyed on player + game + puzzle) |
+| `ingest.py` | Polls the Telegram Bot API for new messages |
 | `backfill.py` | One-time import from a Telegram Desktop JSON export |
-| `app.py` | Streamlit dashboard |
-| `.github/workflows/ingest.yml` | Scheduled ingest, commits DB back |
+| `whatsapp_backfill.py` | One-time import from a WhatsApp iOS export (uses `name_map.csv`) |
+| `app.py` | The Streamlit dashboard (display names are set in `DISPLAY_NAMES` at the top) |
+| `.github/workflows/ingest.yml` | Scheduled ingest; commits the updated DB back to the repo |
 
-## Setup (one time)
+**One-time setup steps**
 
-1. **Bot prep** (already done if your bot is set up): via @BotFather →
-   Bot Settings → *Group Privacy* → **Turn off**, then add the bot to the
-   group. If it was in the group before disabling privacy, remove and
-   re-add it.
-2. **Get the group chat ID**: send any message in the group, then open
-   `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates` in a browser and
-   find `"chat":{"id":-100…}`. Group IDs are negative.
-3. **Create a GitHub repo** with these files and add two
-   *Actions secrets* (Settings → Secrets and variables → Actions):
-   `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.
-4. **Run the workflow once** manually: Actions tab → *Ingest NYT results*
-   → *Run workflow*. It commits an updated `results.db` when it finds
-   share messages.
-5. **Deploy the dashboard**: [share.streamlit.io](https://share.streamlit.io)
-   → New app → point at this repo, main file `app.py`. Optional password:
-   app Settings → Secrets → add `APP_PASSWORD = "yourpassword"`.
-6. **Optional backfill of old messages**: Telegram Desktop → open group →
-   ⋮ → *Export chat history* → format **JSON**, media off. Then locally:
-   `python backfill.py path/to/result.json`, commit `results.db`, push.
+1. Create a bot via @BotFather, **disable Group Privacy** (Bot Settings → Group Privacy → off), and add it to the group. The bot only sees messages sent after it joins.
+2. Get the group chat ID (negative number) from `https://api.telegram.org/bot<TOKEN>/getUpdates` after sending a message in the group.
+3. Add two GitHub Actions secrets on this repo: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.
+4. Run the **Ingest NYT results** workflow once manually (Actions tab) to verify; after that it runs on schedule.
+5. Deploy on [Streamlit Community Cloud](https://share.streamlit.io): point it at this repo, main file `app.py`. Optional password: add `APP_PASSWORD = "..."` in the app's Streamlit secrets.
+6. History imports (already done, kept for reference): `python backfill.py result.json` for Telegram Desktop exports, `python whatsapp_backfill.py _chat.txt` for WhatsApp exports.
 
-## Notes
+**Maintenance notes**
 
-- Telegram only retains unfetched updates ~24 h, so the 6-hour cron never
-  misses messages. The bot only sees messages sent **after** it joined —
-  use the backfill for anything earlier.
-- Re-running ingest or backfill is always safe (upsert on
-  player + game + puzzle number).
-- Scores: Wordle `score` = guesses (7 = fail); Connections `score` =
-  mistakes (0 = perfect).
+- The Action commits to this repo, so **always `git pull --rebase` before pushing** local changes.
+- Re-running any ingest or backfill is safe — everything upserts on (player, game, puzzle number).
+- Need fresh data right now? Actions tab → *Ingest NYT results* → **Run workflow**.
+- The bot token lives only in Actions secrets. If it ever leaks, revoke it via @BotFather and update the secret.
