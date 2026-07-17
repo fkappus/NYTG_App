@@ -87,7 +87,7 @@ DISPLAY_NAMES = {
 }
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=120)
 def load() -> pd.DataFrame:
     import db as _db
     conn = _db.connect("results.db")
@@ -102,152 +102,157 @@ def load() -> pd.DataFrame:
     return df
 
 
-full = load()
+@st.fragment(run_every=300)
+def dashboard():
+    full = load()
 
-# ---------- header ----------
-tiles = "".join(f"<div class='tile' style='background:{c}'></div>"
-                for c in [YELLOW, GREEN, BLUE, PURPLE])
-st.markdown(f"<div class='tile-row'>{tiles}</div>", unsafe_allow_html=True)
-st.markdown("# Bermuda Triangle 🍪")
+    # ---------- header ----------
+    tiles = "".join(f"<div class='tile' style='background:{c}'></div>"
+                    for c in [YELLOW, GREEN, BLUE, PURPLE])
+    st.markdown(f"<div class='tile-row'>{tiles}</div>", unsafe_allow_html=True)
+    st.markdown("# Bermuda Triangle 🍪")
 
-if full.empty:
-    st.info("No results yet — check back after the next ingest run.")
-    st.stop()
+    if full.empty:
+        st.info("No results yet — check back after the next ingest run.")
+        st.stop()
 
-latest_wordle = full.loc[full["game"] == "wordle", "puzzle_number"].max()
-ts = pd.to_datetime(full["message_ts"], errors="coerce", utc=True,
-                    format="mixed")
-try:
-    updated = ts.max().tz_convert("Europe/Berlin").strftime("%d %b, %H:%M")
-except Exception:
-    updated = str(ts.max())
-st.markdown(f"<div class='stamp'>Data through Wordle "
-            f"#{latest_wordle:,.0f} · last refreshed {updated}</div>",
-            unsafe_allow_html=True)
-
-players = sorted(full["player_name"].unique())
-color_of = {p: PLAYER_COLORS[i % len(PLAYER_COLORS)]
-            for i, p in enumerate(players)}
-
-
-# ---------- current play streaks (always as of today) ----------
-def current_streak(dates: pd.Series) -> int:
-    days = sorted(set(dates.dt.date))
-    if not days:
-        return 0
-    today = full["puzzle_date"].max().date()
-    if (today - days[-1]).days > 1:
-        return 0
-    s = 1
-    for a, b in zip(reversed(days[:-1]), reversed(days[1:])):
-        if (b - a).days == 1:
-            s += 1
-        else:
-            break
-    return s
-
-
-st.markdown("<div class='sub'>Current play streaks</div>",
-            unsafe_allow_html=True)
-cards = []
-for p in players:
-    sw = current_streak(
-        full[(full["player_name"] == p) & (full["game"] == "wordle")]
-        ["puzzle_date"])
-    sc = current_streak(
-        full[(full["player_name"] == p) & (full["game"] == "connections")]
-        ["puzzle_date"])
-    cards.append(
-        f"<div class='streak'><div class='n'>{p}</div><div class='v'>"
-        f"<span style='color:{GREEN}'>W {sw}</span>&nbsp;&nbsp;"
-        f"<span style='color:{PURPLE}'>C {sc}</span></div></div>")
-st.markdown(f"<div class='streaks'>{''.join(cards)}</div>",
-            unsafe_allow_html=True)
-
-# ---------- period selector (below streaks) ----------
-period = st.segmented_control(
-    "Period", ["Day", "7 days", "30 days", "All-time"], default="7 days",
-    label_visibility="collapsed")
-today = full["puzzle_date"].max().date()
-cutoff = {"Day": today,
-          "7 days": today - timedelta(days=6),
-          "30 days": today - timedelta(days=29),
-          "All-time": full["puzzle_date"].min().date()}[period or "7 days"]
-df = full[full["puzzle_date"].dt.date >= cutoff]
-if df.empty:
-    st.info("No games in this period yet.")
-    st.stop()
-
-
-def podium(g: pd.DataFrame, shades, unit: str):
-    avg = g.groupby("player_name")["score"].agg(["mean", "size"]) \
-           .sort_values("mean")
-    order = list(avg.index)
-    slots = [1, 0, 2] if len(order) >= 3 else list(range(len(order)))
-    heights = [78, 58, 40]
-    cols = []
-    for slot in slots:
-        p = order[slot]
-        cols.append(
-            f"<div class='pcol'><div class='pname' "
-            f"style='color:{shades[0] if slot == 0 else TEXT}'>{p}</div>"
-            f"<div class='pval'>{avg.loc[p,'mean']:.2f} · "
-            f"{int(avg.loc[p,'size'])} games</div>"
-            f"<div class='pbar' style='height:{heights[slot]}%;"
-            f"background:{shades[slot]}'>{slot + 1}</div></div>")
-    st.markdown(f"<div class='podium'>{''.join(cols)}</div>"
-                f"<div class='sub' style='margin-top:0'>avg {unit} — "
-                f"lower is better</div>", unsafe_allow_html=True)
-
-
-def distribution(g: pd.DataFrame, cats, labels, title: str):
-    st.markdown(f"<div class='sub'>{title}</div>", unsafe_allow_html=True)
-    fig = go.Figure()
-    peak = 0
-    for p in players:
-        sub = g[g["player_name"] == p]
-        if sub.empty:
-            continue
-        pct = (sub["score"].value_counts(normalize=True) * 100)
-        vals = [round(pct.get(cat, 0)) for cat in cats]
-        peak = max(peak, max(vals))
-        fig.add_bar(name=p, y=labels, x=vals, orientation="h",
-                    marker_color=color_of[p],
-                    text=[f"{v}%" if v else "" for v in vals],
-                    textposition="outside",
-                    textfont=dict(size=13, color=color_of[p]))
-    fig.update_layout(
-        barmode="group", height=90 + 60 * len(cats),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=TEXT, size=14, family=FONT),
-        margin=dict(l=8, r=30, t=4, b=4),
-        legend=dict(orientation="h", y=1.08, x=0),
-        xaxis=dict(visible=False, range=[0, max(62, peak * 1.12)]),
-        yaxis=dict(autorange="reversed", gridcolor=BORDER,
-                   tickfont=dict(size=15)))
-    st.plotly_chart(fig, width="stretch",
-                    config={"displayModeBar": False})
-
-
-w = df[df["game"] == "wordle"]
-if not w.empty:
-    st.markdown(f"<div class='sect' style='color:{GREEN}'>Wordle</div>",
+    latest_wordle = full.loc[full["game"] == "wordle", "puzzle_number"].max()
+    ts = pd.to_datetime(full["message_ts"], errors="coerce", utc=True,
+                        format="mixed")
+    try:
+        updated = ts.max().tz_convert("Europe/Berlin").strftime("%d %b, %H:%M")
+    except Exception:
+        updated = str(ts.max())
+    st.markdown(f"<div class='stamp'>Data through Wordle "
+                f"#{latest_wordle:,.0f} · last refreshed {updated}</div>",
                 unsafe_allow_html=True)
-    podium(w, PODIUM_SHADES["wordle"], "attempts")
-    distribution(w, cats=[1, 2, 3, 4, 5, 6, 7],
-                 labels=["1", "2", "3", "4", "5", "6", "X"],
-                 title="Guess distribution — % of each player's games")
 
-c = df[df["game"] == "connections"]
-if not c.empty:
-    st.markdown(f"<div class='sect' style='color:{PURPLE}'>Connections"
+    players = sorted(full["player_name"].unique())
+    color_of = {p: PLAYER_COLORS[i % len(PLAYER_COLORS)]
+                for i, p in enumerate(players)}
+
+
+    # ---------- current play streaks (always as of today) ----------
+    def current_streak(dates: pd.Series) -> int:
+        days = sorted(set(dates.dt.date))
+        if not days:
+            return 0
+        today = full["puzzle_date"].max().date()
+        if (today - days[-1]).days > 1:
+            return 0
+        s = 1
+        for a, b in zip(reversed(days[:-1]), reversed(days[1:])):
+            if (b - a).days == 1:
+                s += 1
+            else:
+                break
+        return s
+
+
+    st.markdown("<div class='sub'>Current play streaks</div>",
+                unsafe_allow_html=True)
+    cards = []
+    for p in players:
+        sw = current_streak(
+            full[(full["player_name"] == p) & (full["game"] == "wordle")]
+            ["puzzle_date"])
+        sc = current_streak(
+            full[(full["player_name"] == p) & (full["game"] == "connections")]
+            ["puzzle_date"])
+        cards.append(
+            f"<div class='streak'><div class='n'>{p}</div><div class='v'>"
+            f"<span style='color:{GREEN}'>W {sw}</span>&nbsp;&nbsp;"
+            f"<span style='color:{PURPLE}'>C {sc}</span></div></div>")
+    st.markdown(f"<div class='streaks'>{''.join(cards)}</div>",
+                unsafe_allow_html=True)
+
+    # ---------- period selector (below streaks) ----------
+    period = st.segmented_control(
+        "Period", ["Day", "7 days", "30 days", "All-time"], default="7 days",
+        label_visibility="collapsed")
+    today = full["puzzle_date"].max().date()
+    cutoff = {"Day": today,
+              "7 days": today - timedelta(days=6),
+              "30 days": today - timedelta(days=29),
+              "All-time": full["puzzle_date"].min().date()}[period or "7 days"]
+    df = full[full["puzzle_date"].dt.date >= cutoff]
+    if df.empty:
+        st.info("No games in this period yet.")
+        st.stop()
+
+
+    def podium(g: pd.DataFrame, shades, unit: str):
+        avg = g.groupby("player_name")["score"].agg(["mean", "size"]) \
+               .sort_values("mean")
+        order = list(avg.index)
+        slots = [1, 0, 2] if len(order) >= 3 else list(range(len(order)))
+        heights = [78, 58, 40]
+        cols = []
+        for slot in slots:
+            p = order[slot]
+            cols.append(
+                f"<div class='pcol'><div class='pname' "
+                f"style='color:{shades[0] if slot == 0 else TEXT}'>{p}</div>"
+                f"<div class='pval'>{avg.loc[p,'mean']:.2f} · "
+                f"{int(avg.loc[p,'size'])} games</div>"
+                f"<div class='pbar' style='height:{heights[slot]}%;"
+                f"background:{shades[slot]}'>{slot + 1}</div></div>")
+        st.markdown(f"<div class='podium'>{''.join(cols)}</div>"
+                    f"<div class='sub' style='margin-top:0'>avg {unit} — "
+                    f"lower is better</div>", unsafe_allow_html=True)
+
+
+    def distribution(g: pd.DataFrame, cats, labels, title: str):
+        st.markdown(f"<div class='sub'>{title}</div>", unsafe_allow_html=True)
+        fig = go.Figure()
+        peak = 0
+        for p in players:
+            sub = g[g["player_name"] == p]
+            if sub.empty:
+                continue
+            pct = (sub["score"].value_counts(normalize=True) * 100)
+            vals = [round(pct.get(cat, 0)) for cat in cats]
+            peak = max(peak, max(vals))
+            fig.add_bar(name=p, y=labels, x=vals, orientation="h",
+                        marker_color=color_of[p],
+                        text=[f"{v}%" if v else "" for v in vals],
+                        textposition="outside",
+                        textfont=dict(size=13, color=color_of[p]))
+        fig.update_layout(
+            barmode="group", height=90 + 60 * len(cats),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color=TEXT, size=14, family=FONT),
+            margin=dict(l=8, r=30, t=4, b=4),
+            legend=dict(orientation="h", y=1.08, x=0),
+            xaxis=dict(visible=False, range=[0, max(62, peak * 1.12)]),
+            yaxis=dict(autorange="reversed", gridcolor=BORDER,
+                       tickfont=dict(size=15)))
+        st.plotly_chart(fig, width="stretch",
+                        config={"displayModeBar": False})
+
+
+    w = df[df["game"] == "wordle"]
+    if not w.empty:
+        st.markdown(f"<div class='sect' style='color:{GREEN}'>Wordle</div>",
+                    unsafe_allow_html=True)
+        podium(w, PODIUM_SHADES["wordle"], "attempts")
+        distribution(w, cats=[1, 2, 3, 4, 5, 6, 7],
+                     labels=["1", "2", "3", "4", "5", "6", "X"],
+                     title="Guess distribution — % of each player's games")
+
+    c = df[df["game"] == "connections"]
+    if not c.empty:
+        st.markdown(f"<div class='sect' style='color:{PURPLE}'>Connections"
+                    f"</div>", unsafe_allow_html=True)
+        podium(c, PODIUM_SHADES["connections"], "mistakes")
+        distribution(c, cats=[0, 1, 2, 3, 4],
+                     labels=["0", "1", "2", "3", "4"],
+                     title="Mistake distribution — % of each player's games")
+
+    st.markdown(f"<div class='stamp' style='margin-top:18px'>{len(df)} results "
+                f"in view · {df['puzzle_date'].min():%d %b %Y} – "
+                f"{df['puzzle_date'].max():%d %b %Y} · updates daily at noon"
                 f"</div>", unsafe_allow_html=True)
-    podium(c, PODIUM_SHADES["connections"], "mistakes")
-    distribution(c, cats=[0, 1, 2, 3, 4],
-                 labels=["0", "1", "2", "3", "4"],
-                 title="Mistake distribution — % of each player's games")
 
-st.markdown(f"<div class='stamp' style='margin-top:18px'>{len(df)} results "
-            f"in view · {df['puzzle_date'].min():%d %b %Y} – "
-            f"{df['puzzle_date'].max():%d %b %Y} · updates daily at noon"
-            f"</div>", unsafe_allow_html=True)
+
+dashboard()
