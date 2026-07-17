@@ -2,7 +2,7 @@ name: Ingest NYT results
 
 on:
   schedule:
-    - cron: "0 10,11 * * *"   # noon in Germany year-round (UTC+1/UTC+2)
+    - cron: "0 4-22/2 * * *"   # every 2h, 06:00-24:00 German summer time
   workflow_dispatch: {}       # manual "Run workflow" button
 
 permissions:
