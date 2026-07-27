@@ -1,5 +1,5 @@
 {
- "updated": "2026-07-27T06:57:07Z",
+ "updated": "2026-07-27T11:13:47Z",
  "data_through": "2026-07-27",
  "players": [
   {
@@ -27,7 +27,7 @@
   {
    "name": "Stella",
    "wordle": {
-    "current": 3,
+    "current": 4,
     "longest": 91
    },
    "connections": {
