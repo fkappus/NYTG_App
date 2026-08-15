@@ -1,15 +1,15 @@
 {
- "updated": "2026-08-15T04:22:36Z",
- "data_through": "2026-08-14",
+ "updated": "2026-08-15T06:26:05Z",
+ "data_through": "2026-08-15",
  "players": [
   {
    "name": "Finn",
    "wordle": {
-    "current": 7,
+    "current": 8,
     "longest": 21
    },
    "connections": {
-    "current": 4,
+    "current": 5,
     "longest": 30
    }
   },
@@ -27,7 +27,7 @@
   {
    "name": "Stella",
    "wordle": {
-    "current": 1,
+    "current": 0,
     "longest": 91
    },
    "connections": {
