@@ -1,0 +1,45 @@
+name: Post summary to Telegram
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"    # Monday 09:00 German summer time (08:00 in winter)
+    - cron: "0 7 1 * *"    # 1st of month, same time
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: "weekly or monthly"
+        default: "weekly"
+      dry_run:
+        description: "true = only print, don't send"
+        default: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install requests pandas
+
+      - name: Decide which summary to send
+        id: kind
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "kind=${{ github.event.inputs.kind }}" >> "$GITHUB_OUTPUT"
+            [ "${{ github.event.inputs.dry_run }}" = "true" ] && echo "flag=--dry-run" >> "$GITHUB_OUTPUT" || true
+          elif [ "$(date -u +%d)" = "01" ]; then
+            echo "kind=monthly" >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=weekly" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and send
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python summary.py ${{ steps.kind.outputs.kind }} ${{ steps.kind.outputs.flag }}
