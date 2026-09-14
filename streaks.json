@@ -1,5 +1,5 @@
 {
- "updated": "2026-09-14T09:27:30Z",
+ "updated": "2026-09-14T16:05:38Z",
  "data_through": "2026-09-14",
  "players": [
   {
@@ -31,8 +31,8 @@
     "longest": 91
    },
    "connections": {
-    "current": 16,
-    "longest": 16
+    "current": 17,
+    "longest": 17
    }
   }
  ]
