@@ -1,37 +1,37 @@
 {
- "updated": "2026-09-22T22:36:59Z",
- "data_through": "2026-09-22",
+ "updated": "2026-09-23T08:59:10Z",
+ "data_through": "2026-09-23",
  "players": [
   {
    "name": "Finn",
    "wordle": {
-    "current": 18,
+    "current": 19,
     "longest": 21
    },
    "connections": {
-    "current": 18,
+    "current": 19,
     "longest": 30
    }
   },
   {
    "name": "Peter",
    "wordle": {
-    "current": 10,
+    "current": 12,
     "longest": 106
    },
    "connections": {
-    "current": 17,
+    "current": 1,
     "longest": 62
    }
   },
   {
    "name": "Stella",
    "wordle": {
-    "current": 5,
+    "current": 6,
     "longest": 91
    },
    "connections": {
-    "current": 3,
+    "current": 4,
     "longest": 19
    }
   }
