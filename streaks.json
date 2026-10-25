@@ -1,6 +1,6 @@
 {
- "updated": "2026-10-25T08:52:08Z",
- "data_through": "2026-10-24",
+ "updated": "2026-10-25T14:02:37Z",
+ "data_through": "2026-10-25",
  "players": [
   {
    "name": "Finn",
@@ -9,25 +9,25 @@
     "longest": 25
    },
    "connections": {
-    "current": 1,
+    "current": 0,
     "longest": 30
    }
   },
   {
    "name": "Peter",
    "wordle": {
-    "current": 16,
+    "current": 17,
     "longest": 106
    },
    "connections": {
-    "current": 4,
+    "current": 5,
     "longest": 62
    }
   },
   {
    "name": "Stella",
    "wordle": {
-    "current": 6,
+    "current": 0,
     "longest": 91
    },
    "connections": {
