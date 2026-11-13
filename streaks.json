@@ -1,6 +1,6 @@
 {
- "updated": "2026-11-13T11:46:26Z",
- "data_through": "2026-11-12",
+ "updated": "2026-11-13T19:03:09Z",
+ "data_through": "2026-11-13",
  "players": [
   {
    "name": "Finn",
@@ -9,7 +9,7 @@
     "longest": 25
    },
    "connections": {
-    "current": 3,
+    "current": 1,
     "longest": 30
    }
   },
